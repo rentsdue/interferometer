@@ -123,8 +123,8 @@ def invert_n_from_m(m_meas, theta_a_deg, theta_b_deg, d_slab, wavelength,
 
 # ---------------- Main loop ----------------
 rows = []
-peak_counts = []
-n_estimates = []
+grouped_results = {2: [], 4: [], 6: []}   # store n_estimates by angle range
+grouped_m = {2: [], 4: [], 6: []}         # store m counts
 
 for fname, theta_a_deg, theta_b_deg in file_specs:
     if not os.path.exists(fname):
@@ -154,7 +154,7 @@ for fname, theta_a_deg, theta_b_deg in file_specs:
             d_slab=d_slab_m,
             wavelength=lambda_m,
             n_lo=1.0001,
-            n_hi=2.0  # near glass; will auto-expand if needed
+            n_hi=2.0
         )
     except Exception as e:
         n_est = np.nan
@@ -183,40 +183,37 @@ for fname, theta_a_deg, theta_b_deg in file_specs:
         "n_estimate": n_est,
         "plot": plot_path
     })
-    peak_counts.append(m_meas)
-    n_estimates.append(n_est)
 
-    # Per-file report
+    # Group results by final angle (2, 4, or 6 degrees)
+    end_angle = int(theta_b_deg)
+    if np.isfinite(n_est):
+        grouped_results[end_angle].append(n_est)
+    grouped_m[end_angle].append(m_meas)
+
     if np.isfinite(n_est):
         print(f"{fname}: m = {m_meas:3d}, θ = {theta_a_deg:.1f}°→{theta_b_deg:.1f}°, n = {n_est:.5f}")
     else:
         print(f"{fname}: m = {m_meas:3d}, θ = {theta_a_deg:.1f}°→{theta_b_deg:.1f}°, n = NaN")
 
-# ---------------- Summary statistics and CSV ----------------
-def finite_array(a):
-    return np.array([x for x in a if np.isfinite(x)], dtype=float)
+# ---------------- Summary statistics ----------------
+def summarize(values):
+    arr = np.array([x for x in values if np.isfinite(x)], dtype=float)
+    if arr.size == 0:
+        return np.nan, np.nan, np.nan
+    mean = np.mean(arr)
+    std = np.std(arr, ddof=1) if arr.size > 1 else 0.0
+    sem = std / math.sqrt(arr.size) if arr.size > 1 else 0.0
+    return mean, std, sem
 
-peak_counts_arr = finite_array(peak_counts)
-n_estimates_arr = finite_array(n_estimates)
+print("\n===== Summary by Angle Range =====")
+for angle in (2, 4, 6):
+    mean_m, std_m, sem_m = summarize(grouped_m[angle])
+    mean_n, std_n, sem_n = summarize(grouped_results[angle])
+    print(f"0→{angle}°:")
+    print(f"  Peaks m: mean = {mean_m:.2f}, std = {std_m:.2f}, stderr = {sem_m:.2f}")
+    print(f"  Refractive index n: mean = {mean_n:.5f}, std = {std_n:.5f}, stderr = {sem_n:.5f}")
 
-if peak_counts_arr.size:
-    mean_m = np.mean(peak_counts_arr)
-    std_m = np.std(peak_counts_arr, ddof=1) if peak_counts_arr.size > 1 else 0.0
-    sem_m = std_m / math.sqrt(peak_counts_arr.size) if peak_counts_arr.size > 1 else 0.0
-    print("\nPeaks (m): "
-          f"mean = {mean_m:.2f}, std = {std_m:.2f}, stderr = {sem_m:.2f}")
-else:
-    print("\nPeaks: no finite data.")
-
-if n_estimates_arr.size:
-    mean_n = np.mean(n_estimates_arr)
-    std_n = np.std(n_estimates_arr, ddof=1) if n_estimates_arr.size > 1 else 0.0
-    sem_n = std_n / math.sqrt(n_estimates_arr.size) if n_estimates_arr.size > 1 else 0.0
-    print(f"Refractive index n: mean = {mean_n:.5f}, std = {std_n:.5f}, stderr = {sem_n:.5f}")
-else:
-    print("Refractive index n: no finite estimates.")
-
-# Write CSV summary
+# ---------------- Write CSV summary ----------------
 with open(summary_csv, "w", newline="") as f:
     writer = csv.writer(f)
     writer.writerow(["file", "theta_start_deg", "theta_end_deg", "peaks_m", "n_estimate", "plot_path"])
@@ -225,3 +222,4 @@ with open(summary_csv, "w", newline="") as f:
 
 print(f"\nSummary written to: {summary_csv}")
 print(f"Plots saved under: {out_dir}/")
+
