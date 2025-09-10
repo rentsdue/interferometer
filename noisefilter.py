@@ -8,8 +8,8 @@ d = 5e-6
 threshold = 0.25  # unified threshold (region + peak detection)
 
 # Store results
-peak_counts = []
-wavelengths = []
+peak_counts = []   # valid trials
+trial_results = [] # all trials (including skipped)
 
 # Ensure output folder exists
 out_dir = "results"
@@ -20,6 +20,7 @@ for i in range(1, 11):
     filename = f"c1_data_{i}.csv"
     if not os.path.exists(filename):
         print(f"Warning: {filename} not found, skipping.")
+        trial_results.append((i, None))
         continue
 
     # ---------------- 1) Load CSV (ignore comment lines) ----------------
@@ -37,6 +38,7 @@ for i in range(1, 11):
     data = np.array(all_data)
     if data.shape[1] < 2:
         print(f"{filename} does not have at least two columns, skipping.")
+        trial_results.append((i, None))
         continue
 
     # Extract time and probe signal
@@ -47,6 +49,7 @@ for i in range(1, 11):
     mask = y >= threshold
     if not mask.any():
         print(f"No data points >= {threshold} V in {filename}, skipping.")
+        trial_results.append((i, None))
         continue
 
     first_idx = np.argmax(mask)
@@ -73,7 +76,9 @@ for i in range(1, 11):
     if m > 0:
         wavelength = 2 * d / m
         peak_counts.append(m)
-        wavelengths.append(wavelength)
+        trial_results.append((i, m))
+    else:
+        trial_results.append((i, 0))
 
     # ---------------- 5) Plot and save ----------------
     plt.figure(figsize=(10, 5))
@@ -89,32 +94,53 @@ for i in range(1, 11):
     # Plot filtered peaks (after min separation)
     plt.plot(t[filtered_peaks], y[filtered_peaks], "ro", label="Accepted Peaks")
 
-    plt.xlabel("Time [s]")
-    plt.ylabel("Probe Voltage [V]")
-    plt.title(f"Peak Detection - {filename}\n(m={m}, λ={wavelength:.2e} m)")
-    plt.legend()
+    plt.xlabel("Time [s]", fontsize=16)
+    plt.ylabel("Probe Voltage [V]", fontsize=16)
+    plt.title(f"Peak Detection (m={m}, λ={2*d/m:.2e} m)" if m > 0 else f"Peak Detection (no valid peaks)", fontsize=18)
+
+    # Place legend outside on the right
+    plt.legend(loc="center left", bbox_to_anchor=(1, 0.5))
     plt.tight_layout()
-    plt.savefig(os.path.join(out_dir, f"{filename}_peaks.png"))
+
+    plt.savefig(os.path.join(out_dir, f"{filename}_peaks.png"), bbox_inches="tight")
     plt.close()
 
+
 # ---------------- 6) Summary statistics ----------------
+print("\nFringe counts per trial:")
+for trial, m in trial_results:
+    if m is None:
+        print(f" Trial {trial}: skipped (no valid data)")
+    elif m == 0:
+        print(f" Trial {trial}: no valid peaks")
+    else:
+        print(f" Trial {trial}: m = {m}")
+
 if peak_counts:
+    peak_counts = np.array(peak_counts)
+
+    # Average and standard error of fringe counts
     avg_peaks = np.mean(peak_counts)
-    std_peaks = np.std(peak_counts, ddof=1)  # sample std
-    stderr_peaks = std_peaks / np.sqrt(len(peak_counts))
+    std_peaks = np.std(peak_counts, ddof=1)   # sample standard deviation
+    stderr_peaks = std_peaks / np.sqrt(len(peak_counts))  # standard error of mean
 
-    wavelengths = np.array(wavelengths)
-    avg_wavelength = np.mean(wavelengths)
+    # Wavelength from mean fringe count
+    wavelength_mean = 2 * d / avg_peaks
 
-    # Error propagation
-    d_error = 1e-7  # error in d
-    sigma_m = stderr_peaks
+    # Error propagation: λ = 2d/m
+    d_error = 1e-7
     m_avg = avg_peaks
-    stderr_wavelength = np.sqrt((2 / m_avg * d_error)**2 +
-                                (2 * d / m_avg**2 * sigma_m)**2)
+    sigma_m = stderr_peaks
+    stderr_wavelength = np.sqrt(
+        (2 / m_avg * d_error)**2 +   # contribution from d
+        (2 * d / m_avg**2 * sigma_m)**2   # contribution from m
+    )
 
-    print("\nSummary across all files:")
-    print(f"Peaks: mean = {avg_peaks:.2f}, std = {std_peaks:.2f}, stderr = {stderr_peaks:.2f}")
-    print(f"Wavelength: mean = {avg_wavelength:.3e} m, stderr (propagated) = {stderr_wavelength:.3e} m")
+    print("\nSummary across all valid trials:")
+    print(f"Average fringe count (m): {avg_peaks:.2f}")
+    print(f"Standard error of fringe count: {stderr_peaks:.2f}")
+    print(f"Experimental wavelength: {wavelength_mean:.3e} m")
+    print(f"Propagated error in wavelength: {stderr_wavelength:.3e} m")
+
 else:
     print("No valid data found across files.")
