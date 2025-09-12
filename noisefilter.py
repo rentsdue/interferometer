@@ -80,7 +80,7 @@ for i in range(1, 11):
     else:
         trial_results.append((i, 0))
 
-    # ---------------- 5) Plot and save ----------------
+        # ---------------- 5) Plot and save ----------------
     plt.figure(figsize=(10, 5))
     plt.plot(t, y, label="Probe Signal", color="blue")
 
@@ -96,7 +96,20 @@ for i in range(1, 11):
 
     plt.xlabel("Time [s]", fontsize=16)
     plt.ylabel("Probe Voltage [V]", fontsize=16)
-    plt.title(f"Peak Detection (m={m}, λ={2*d/m:.2e} m)" if m > 0 else f"Peak Detection (no valid peaks)", fontsize=18)
+
+    # Use descriptive title with trial number
+    if m > 0:
+        plt.title(
+            f"Recorded voltage from detector vs time (Trial {i})\n"
+            f"m = {m}, λ ≈ {2*d/m:.2e} m",
+            fontsize=16
+        )
+    else:
+        plt.title(
+            f"Recorded voltage from detector vs time (Trial {i})\n"
+            f"No valid peaks",
+            fontsize=16
+        )
 
     # Place legend outside on the right
     plt.legend(loc="center left", bbox_to_anchor=(1, 0.5))
@@ -104,6 +117,7 @@ for i in range(1, 11):
 
     plt.savefig(os.path.join(out_dir, f"{filename}_peaks.png"), bbox_inches="tight")
     plt.close()
+
 
 
 # ---------------- 6) Summary statistics ----------------

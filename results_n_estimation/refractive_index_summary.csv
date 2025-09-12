@@ -1,0 +1,10 @@
+file,theta_start_deg,theta_end_deg,trial_number,peaks_m,n_estimate,plot_path
+0to2_2.csv,0.0,2.0,1,2,1.1196354922493224,results_n_estimation\0to2_2_peaks.png
+0to2_4.csv,0.0,2.0,2,11,2.426510608126876,results_n_estimation\0to2_4_peaks.png
+0to2_6.csv,0.0,2.0,3,5,1.3645631276520553,results_n_estimation\0to2_6_peaks.png
+0to4_2.csv,0.0,4.0,1,11,1.1720019333707072,results_n_estimation\0to4_2_peaks.png
+0to4_4.csv,0.0,4.0,2,15,1.2502510466123857,results_n_estimation\0to4_4_peaks.png
+0to4_6.csv,0.0,4.0,3,16,1.2714779295657332,results_n_estimation\0to4_6_peaks.png
+0to6_1.csv,0.0,6.0,1,15,1.0973774522329343,results_n_estimation\0to6_1_peaks.png
+0to6_3.csv,0.0,6.0,2,15,1.0973774522329343,results_n_estimation\0to6_3_peaks.png
+0to6_5.csv,0.0,6.0,3,16,1.1045532960247773,results_n_estimation\0to6_5_peaks.png
