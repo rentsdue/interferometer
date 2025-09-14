@@ -4,8 +4,8 @@ from scipy.signal import find_peaks
 import os
 
 # Path difference
-d = 5e-6
-threshold = 0.25  # unified threshold (region + peak detection)
+d = 5e-5
+threshold = 0.01 # unified threshold (region + peak detection)
 
 # Store results
 peak_counts = []   # valid trials
@@ -15,46 +15,31 @@ trial_results = [] # all trials (including skipped)
 out_dir = "results"
 os.makedirs(out_dir, exist_ok=True)
 
-# ---------------- Loop over Part 2 files ----------------
-trial_results = []
-
+# Loop over 10 files
 for i in range(1, 11):
     filename = f"part2_data_{i}.csv"
-
     if not os.path.exists(filename):
         print(f"Warning: {filename} not found, skipping.")
         trial_results.append((i, None))
         continue
 
-    # Load CSV (ignore '%' comment lines)
+    # ---------------- 1) Load CSV (ignore comment lines) ----------------
     all_data = []
     with open(filename, "r") as f:
         for line in f:
-            s = line.strip()
-            if not s or s.startswith("%"):
-                continue
-            parts = s.split(",")
-            try:
-                values = [float(x) for x in parts]
-            except ValueError:
-                continue
-            if len(values) >= 2:
-                all_data.append(values[:2])
+            if not line.startswith("%") and line.strip():
+                parts = line.strip().split(",")
+                try:
+                    values = [float(x) for x in parts]
+                    all_data.append(values)
+                except ValueError:
+                    continue
 
-    if not all_data:
-        print(f"{filename}: no valid numeric data, skipping.")
-        trial_results.append((i, None))
-        continue
-
-    data = np.array(all_data, dtype=float)
+    data = np.array(all_data)
     if data.shape[1] < 2:
         print(f"{filename} does not have at least two columns, skipping.")
         trial_results.append((i, None))
         continue
-
-    #If we reach here, we’ve successfully loaded trial i
-    trial_results.append((i, data))
-
 
     # Extract time and probe signal
     t = data[:, 0]
@@ -77,7 +62,7 @@ for i in range(1, 11):
 
     # ---------------- 4) Remove peaks too close together ----------------
     total_time = t[-1] - t[0]
-    min_sep = 0.04 * total_time   # 4% of duration
+    min_sep = 0.003 * total_time   # 0.3% of duration
 
     filtered_peaks = []
     last_time = -np.inf
@@ -157,7 +142,7 @@ if peak_counts:
     wavelength_mean = 2 * d / avg_peaks
 
     # Error propagation: λ = 2d/m
-    d_error = 5e-7
+    d_error = 1e-7
     m_avg = avg_peaks
     sigma_m = stderr_peaks
     stderr_wavelength = np.sqrt(
