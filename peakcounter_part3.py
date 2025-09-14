@@ -17,13 +17,14 @@ peak_height = 0.25        # V; minimum peak height
 # Output
 out_dir = "results_n_estimation"
 os.makedirs(out_dir, exist_ok=True)
-summary_csv = os.path.join(out_dir, "refractive_index_summary.csv")
 
 # ---------------- File groups and angle sweeps ----------------
 file_specs = []
-file_specs += [(f"0to2_{i}.csv", 0.0, 2.0) for i in (2, 4, 6)]
-file_specs += [(f"0to4_{i}.csv", 0.0, 4.0) for i in (2, 4, 6)]
-file_specs += [(f"0to6_{i}.csv", 0.0, 6.0) for i in (1, 3, 5)]
+for angle in (2, 4, 6):        # degrees
+    for trial in (1, 2, 3):    # trial numbers
+        fname = f"0to{angle}deg_trial{trial}.csv"
+        file_specs.append((fname, 0.0, float(angle)))
+
 
 # ---------------- Utility: load CSV ignoring '%' comments ----------------
 def load_two_columns_csv(path):
@@ -205,12 +206,5 @@ for angle in (2, 4, 6):
     print(f"  Average m = {mean_m:.2f} ± {sem_m:.2f}")
     print(f"  Average n = {mean_n:.5f} ± {sem_n:.5f}")
 
-# ---------------- Save CSV ----------------
-with open(summary_csv, "w", newline="") as f:
-    writer = csv.writer(f)
-    writer.writerow(["file", "theta_start_deg", "theta_end_deg", "trial_number", "peaks_m", "n_estimate", "plot_path"])
-    for r in rows:
-        writer.writerow([r["file"], r["theta_start_deg"], r["theta_end_deg"], r["trial_number"], r["peaks_m"], r["n_estimate"], r["plot"]])
 
-print(f"\nSummary written to: {summary_csv}")
 print(f"Plots saved under: {out_dir}/")

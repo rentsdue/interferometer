@@ -15,31 +15,46 @@ trial_results = [] # all trials (including skipped)
 out_dir = "results"
 os.makedirs(out_dir, exist_ok=True)
 
-# Loop over 10 files
+# ---------------- Loop over Part 2 files ----------------
+trial_results = []
+
 for i in range(1, 11):
-    filename = f"c1_data_{i}.csv"
+    filename = f"part2_data_{i}.csv"
+
     if not os.path.exists(filename):
         print(f"Warning: {filename} not found, skipping.")
         trial_results.append((i, None))
         continue
 
-    # ---------------- 1) Load CSV (ignore comment lines) ----------------
+    # Load CSV (ignore '%' comment lines)
     all_data = []
     with open(filename, "r") as f:
         for line in f:
-            if not line.startswith("%") and line.strip():
-                parts = line.strip().split(",")
-                try:
-                    values = [float(x) for x in parts]
-                    all_data.append(values)
-                except ValueError:
-                    continue
+            s = line.strip()
+            if not s or s.startswith("%"):
+                continue
+            parts = s.split(",")
+            try:
+                values = [float(x) for x in parts]
+            except ValueError:
+                continue
+            if len(values) >= 2:
+                all_data.append(values[:2])
 
-    data = np.array(all_data)
+    if not all_data:
+        print(f"{filename}: no valid numeric data, skipping.")
+        trial_results.append((i, None))
+        continue
+
+    data = np.array(all_data, dtype=float)
     if data.shape[1] < 2:
         print(f"{filename} does not have at least two columns, skipping.")
         trial_results.append((i, None))
         continue
+
+    #If we reach here, we’ve successfully loaded trial i
+    trial_results.append((i, data))
+
 
     # Extract time and probe signal
     t = data[:, 0]
@@ -142,7 +157,7 @@ if peak_counts:
     wavelength_mean = 2 * d / avg_peaks
 
     # Error propagation: λ = 2d/m
-    d_error = 1e-7
+    d_error = 5e-7
     m_avg = avg_peaks
     sigma_m = stderr_peaks
     stderr_wavelength = np.sqrt(
